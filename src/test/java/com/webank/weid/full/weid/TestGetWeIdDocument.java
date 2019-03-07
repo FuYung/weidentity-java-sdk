@@ -19,22 +19,32 @@
 
 package com.webank.weid.full.weid;
 
-import com.webank.weid.common.BeanUtil;
-import com.webank.weid.constant.ErrorCode;
-import com.webank.weid.contract.WeIdContract;
-import com.webank.weid.full.TestBaseServcie;
-import com.webank.weid.full.TestBaseUtil;
-import com.webank.weid.protocol.base.WeIdDocument;
-import com.webank.weid.protocol.response.ResponseData;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+
 import mockit.Mock;
 import mockit.MockUp;
 import org.bcos.web3j.abi.datatypes.Address;
-import org.bcos.web3j.abi.datatypes.generated.Uint256;
+import org.bcos.web3j.abi.datatypes.generated.Bytes32;
+import org.bcos.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.webank.weid.common.BeanUtil;
+import com.webank.weid.constant.ErrorCode;
+import com.webank.weid.contract.WeIdContract;
+import com.webank.weid.contract.WeIdContract.WeIdAttributeChangedEventResponse;
+import com.webank.weid.exception.DataTypeCastException;
+import com.webank.weid.exception.WeIdBaseException;
+import com.webank.weid.full.TestBaseServcie;
+import com.webank.weid.full.TestBaseUtil;
+import com.webank.weid.protocol.base.WeIdDocument;
+import com.webank.weid.protocol.response.CreateWeIdDataResult;
+import com.webank.weid.protocol.response.ResponseData;
+import com.webank.weid.util.DataTypetUtils;
 
 /**
  * getWeIdDocument method for testing WeIdService.
@@ -43,37 +53,49 @@ import org.junit.Test;
  *
  */
 public class TestGetWeIdDocument extends TestBaseServcie {
+    
+    private static final Logger logger = LoggerFactory.getLogger(TestGetWeIdDocument.class);
+    
+    protected static CreateWeIdDataResult createWeIdForGetDoc = null;
+    
+    @Override
+    public void testInit() {
+        super.testInit();
+        if (null == createWeIdForGetDoc) {
+            createWeIdForGetDoc = super.createWeIdWithSetAttr(); 
+        }
+    }
 
     /**
      * case: set and get weIdDom.
      *
-     * @throws Exception may be throw Exception
      */
     @Test
-    public void testGetWeIdDocumentCase1() throws Exception {
+    public void testGetWeIdDocumentCase1() {
 
         ResponseData<WeIdDocument> weIdDoc =
             weIdService.getWeIdDocument(createWeIdForGetDoc.getWeId());
-        System.out.println("\ngetWeIdDocument result:");
+        logger.info("getWeIdDocument result:");
         BeanUtil.print(weIdDoc);
 
         Assert.assertEquals(ErrorCode.SUCCESS.getCode(), weIdDoc.getErrorCode().intValue());
-        Assert.assertNotNull(weIdDoc.getResult());
+        Assert.assertEquals(1, weIdDoc.getResult().getService().size());
+        Assert.assertEquals(1, weIdDoc.getResult().getAuthentication().size());
+        Assert.assertEquals(1, weIdDoc.getResult().getPublicKey().size());
     }
 
     /**
      * case: set many times and get the weIdDom.
      *
-     * @throws Exception   may be throw Exception
      */
     @Test
-    public void testGetWeIdDocumentCase2() throws Exception {
+    public void testGetWeIdDocumentCase2() {
 
         super.setPublicKey(createWeIdForGetDoc,
-            TestBaseUtil.createEcKeyPair()[0],
+            TestBaseUtil.createEcKeyPair().getPublicKey(),
             createWeIdNew.getWeId());
         super.setAuthentication(createWeIdForGetDoc,
-            TestBaseUtil.createEcKeyPair()[0],
+            TestBaseUtil.createEcKeyPair().getPublicKey(),
             createWeIdForGetDoc.getWeId());
         super.setService(createWeIdForGetDoc,
             "drivingCardServic1",
@@ -81,23 +103,24 @@ public class TestGetWeIdDocument extends TestBaseServcie {
 
         ResponseData<WeIdDocument> weIdDoc =
             weIdService.getWeIdDocument(createWeIdForGetDoc.getWeId());
-        System.out.println("\ngetWeIdDocument result:");
+        logger.info("getWeIdDocument result:");
         BeanUtil.print(weIdDoc);
 
         Assert.assertEquals(ErrorCode.SUCCESS.getCode(), weIdDoc.getErrorCode().intValue());
-        Assert.assertNotNull(weIdDoc.getResult());
+        Assert.assertEquals(2, weIdDoc.getResult().getService().size());
+        Assert.assertEquals(2, weIdDoc.getResult().getAuthentication().size());
+        Assert.assertEquals(3, weIdDoc.getResult().getPublicKey().size());
     }
 
     /**
-     * case: weIdentity DID is invalid.
+     * case: WeIdentity DID is invalid.
      * 
-     * @throws Exception   may be throw Exception
      */
     @Test
-    public void testGetWeIdDocumentCase3() throws Exception {
+    public void testGetWeIdDocumentCase3() {
 
         ResponseData<WeIdDocument> weIdDoc = weIdService.getWeIdDocument("xxxxxxxxxx");
-        System.out.println("\ngetWeIdDocument result:");
+        logger.info("getWeIdDocument result:");
         BeanUtil.print(weIdDoc);
 
         Assert.assertEquals(ErrorCode.WEID_INVALID.getCode(), weIdDoc.getErrorCode().intValue());
@@ -105,15 +128,14 @@ public class TestGetWeIdDocument extends TestBaseServcie {
     }
 
     /**
-     * case: weIdentity DID is null.
+     * case: WeIdentity DID is null.
      *
-     * @throws Exception   may be throw Exception
      */
     @Test
-    public void testGetWeIdDocumentCase4() throws Exception {
+    public void testGetWeIdDocumentCase4() {
 
         ResponseData<WeIdDocument> weIdDoc = weIdService.getWeIdDocument(null);
-        System.out.println("\ngetWeIdDocument result:");
+        logger.info("getWeIdDocument result:");
         BeanUtil.print(weIdDoc);
 
         Assert.assertEquals(ErrorCode.WEID_INVALID.getCode(), weIdDoc.getErrorCode().intValue());
@@ -121,16 +143,15 @@ public class TestGetWeIdDocument extends TestBaseServcie {
     }
 
     /**
-     * case: weIdentity DID is not exists.
+     * case: WeIdentity DID is not exists.
      * 
-     * @throws Exception   may be throw Exception
      */
     @Test
-    public void testGetWeIdDocumentCase5() throws Exception {
+    public void testGetWeIdDocumentCase5() {
 
         ResponseData<WeIdDocument> weIdDoc =
             weIdService.getWeIdDocument("did:weid:0xa1c93e93622c6a0b2f52c90741e0b98ab77385a9");
-        System.out.println("\ngetWeIdDocument result:");
+        logger.info("getWeIdDocument result:");
         BeanUtil.print(weIdDoc);
 
         Assert.assertEquals(ErrorCode.WEID_DOES_NOT_EXIST.getCode(),
@@ -142,32 +163,13 @@ public class TestGetWeIdDocument extends TestBaseServcie {
      * case: Simulation throws an InterruptedException when calling the getLatestRelatedBlock 
      *       method.
      * 
-     * @throws Exception   may be throw Exception
      */
     @Test
-    public void testGetWeIdDocumentCase6() throws Exception {
+    public void testGetWeIdDocumentCase6() {
 
-        final MockUp<Future<Uint256>> mockFuture = new MockUp<Future<Uint256>>() {
-            @Mock
-            public Future<Uint256> get(long timeout, TimeUnit unit) throws Exception {
-                throw new InterruptedException();
-            }
-        };
+        MockUp<Future<?>> mockFuture = mockInterruptedFuture();
 
-        MockUp<WeIdContract> mockTest = new MockUp<WeIdContract>() {
-            @Mock
-            public Future<Uint256> getLatestRelatedBlock(Address identity) throws Exception {
-                return mockFuture.getMockInstance();
-            }
-        };
-
-        ResponseData<WeIdDocument> weIdDoc =
-            weIdService.getWeIdDocument(createWeIdForGetDoc.getWeId());
-        System.out.println("\ngetWeIdDocument result:");
-        BeanUtil.print(weIdDoc);
-
-        mockTest.tearDown();
-        mockFuture.tearDown();
+        ResponseData<WeIdDocument> weIdDoc = getWeIdDocument(mockFuture);
 
         Assert.assertEquals(ErrorCode.TRANSACTION_EXECUTE_ERROR.getCode(),
             weIdDoc.getErrorCode().intValue());
@@ -177,35 +179,110 @@ public class TestGetWeIdDocument extends TestBaseServcie {
     /**
      * case: Simulation throws an TimeoutException when calling the getLatestRelatedBlock method.
      * 
-     * @throws Exception   may be throw Exception
      */
     @Test
-    public void testGetWeIdDocumentCase7() throws Exception {
+    public void testGetWeIdDocumentCase7() {
 
-        final MockUp<Future<Uint256>> mockFuture = new MockUp<Future<Uint256>>() {
-            @Mock
-            public Future<Uint256> get(long timeout, TimeUnit unit) throws Exception {
-                throw new TimeoutException();
-            }
-        };
+        MockUp<Future<?>> mockFuture = mockTimeoutFuture();
 
+        ResponseData<WeIdDocument> weIdDoc = getWeIdDocument(mockFuture);
+
+        Assert.assertEquals(ErrorCode.TRANSACTION_TIMEOUT.getCode(),
+            weIdDoc.getErrorCode().intValue());
+        Assert.assertNull(weIdDoc.getResult());
+    }
+
+    private ResponseData<WeIdDocument> getWeIdDocument(MockUp<Future<?>> mockFuture) {
+        
         MockUp<WeIdContract> mockTest = new MockUp<WeIdContract>() {
             @Mock
-            public Future<Uint256> getLatestRelatedBlock(Address identity) throws Exception {
+            public Future<?> getLatestRelatedBlock(Address identity) {
                 return mockFuture.getMockInstance();
             }
         };
 
         ResponseData<WeIdDocument> weIdDoc =
             weIdService.getWeIdDocument(createWeIdForGetDoc.getWeId());
-        System.out.println("\ngetWeIdDocument result:");
+        logger.info("getWeIdDocument result:");
         BeanUtil.print(weIdDoc);
 
         mockTest.tearDown();
         mockFuture.tearDown();
+        return weIdDoc;
+    }
+    
+    /**
+     * case: mock WeIdContract.getWeIdAttributeChangedEvents
+     *      for WeIdServiceImpl.resolveAttributeEvent().
+     * 
+     */
+    @Test
+    public void testGetWeIdDocumentCase8() {
 
-        Assert.assertEquals(ErrorCode.TRANSACTION_TIMEOUT.getCode(),
+        MockUp<WeIdContract> mockTest = new MockUp<WeIdContract>() {
+            @Mock
+            public List<WeIdAttributeChangedEventResponse> getWeIdAttributeChangedEvents(
+                    TransactionReceipt transactionReceipt) {
+                List<WeIdAttributeChangedEventResponse> eventlog = 
+                    new ArrayList<WeIdContract.WeIdAttributeChangedEventResponse>();
+                eventlog.add(new WeIdAttributeChangedEventResponse());
+                return eventlog;
+            }
+        };
+
+        ResponseData<WeIdDocument> weIdDoc = 
+            weIdService.getWeIdDocument(createWeIdForGetDoc.getWeId());
+        mockTest.tearDown();
+        BeanUtil.print(weIdDoc);
+        Assert.assertEquals(ErrorCode.SUCCESS.getCode(),
             weIdDoc.getErrorCode().intValue());
-        Assert.assertNull(weIdDoc.getResult());
+    }
+    
+    /**
+     * case: mock WeIdContract.getWeIdAttributeChangedEvents 
+     * for WeIdServiceImpl.resolveAttributeEvent().
+     * 
+     */
+    @Test
+    public void testGetWeIdDocumentCase9() {
+
+        MockUp<WeIdContract> mockTest = new MockUp<WeIdContract>() {
+            @Mock
+            public List<WeIdAttributeChangedEventResponse> getWeIdAttributeChangedEvents(
+                    TransactionReceipt transactionReceipt) {
+                return null;
+            }
+        };
+        
+        ResponseData<WeIdDocument> weIdDoc = 
+            weIdService.getWeIdDocument(createWeIdForGetDoc.getWeId());
+        mockTest.tearDown();
+        BeanUtil.print(weIdDoc);
+        Assert.assertEquals(ErrorCode.SUCCESS.getCode(),
+            weIdDoc.getErrorCode().intValue());
+    }
+
+    /**
+     * mock ResolveAttributeException for coverage.
+     */
+    @Test
+    public void testGetWeIdDocumentCase10() {
+
+        MockUp<DataTypetUtils> mockTest = new MockUp<DataTypetUtils>() {
+            @Mock
+            public String bytes32ToString(Bytes32 bytes32) {
+                WeIdBaseException e = new WeIdBaseException(
+                    "mock ResolveAttributeException for coverage.");
+                logger.error("testGetWeIdDocumentCase10:{}", e.toString(), e);
+                throw new DataTypeCastException(e);
+            }
+        };
+
+        ResponseData<WeIdDocument> weIdDoc =
+            weIdService.getWeIdDocument(createWeIdForGetDoc.getWeId());
+        mockTest.tearDown();
+        BeanUtil.print(weIdDoc);
+        Assert.assertEquals(ErrorCode.TRANSACTION_EXECUTE_ERROR.getCode(),
+            weIdDoc.getErrorCode().intValue());
     }
 }

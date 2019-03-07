@@ -1,5 +1,5 @@
 /*
- *       Copyright© (2018) WeBank Co., Ltd.
+ *       Copyright© (2018-2019) WeBank Co., Ltd.
  *
  *       This file is part of weidentity-java-sdk.
  *
@@ -24,6 +24,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
+ * contract address config.
+ *
  * @author tonychen 2018.9.29
  */
 @Component("ContractConfig")
@@ -47,4 +49,10 @@ public class ContractConfig {
      */
     @Value("${issuer.contractaddress}")
     private String issuerAddress;
+
+    /**
+     * The EvidenceController Contract address.
+     */
+    @Value("${evidence.contractaddress}")
+    private String evidenceAddress;
 }

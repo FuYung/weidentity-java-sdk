@@ -19,88 +19,85 @@
 
 package com.webank.weid.full.credential;
 
+import org.junit.Assert;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.webank.weid.common.BeanUtil;
+import com.webank.weid.common.PasswordKey;
 import com.webank.weid.constant.ErrorCode;
 import com.webank.weid.full.TestBaseServcie;
 import com.webank.weid.full.TestBaseUtil;
-import com.webank.weid.protocol.base.Credential;
+import com.webank.weid.protocol.base.CredentialWrapper;
+import com.webank.weid.protocol.base.WeIdPublicKey;
 import com.webank.weid.protocol.request.CreateCredentialArgs;
-import com.webank.weid.protocol.request.VerifyCredentialArgs;
 import com.webank.weid.protocol.response.ResponseData;
-import org.junit.Assert;
-import org.junit.Test;
 
 /**
  * verifyCredentialWithSpecifiedPubKey method for testing CredentialService.
- * 
- * @author v_wbgyang
  *
+ * @author v_wbgyang
  */
 public class TestVerifyCredentialWithSpecifiedPubKey extends TestBaseServcie {
 
-    private String[] pk = null;
+    private static final Logger logger =
+        LoggerFactory.getLogger(TestVerifyCredentialWithSpecifiedPubKey.class);
+
+    protected PasswordKey newPasswordKey = null;
 
     @Override
-    public void testInit() throws Exception {
-
+    public void testInit() {
         super.testInit();
-        pk = TestBaseUtil.createEcKeyPair();
-        if (createCredentialArgs == null) {
-            registerCptArgs = TestBaseUtil.buildRegisterCptArgs(createWeIdWithSetAttr);
-            createCredentialArgs = TestBaseUtil.buildCreateCredentialArgs(createWeIdWithSetAttr);
-            cptBaseInfo = this.registerCpt(createWeIdWithSetAttr, registerCptArgs);
-            createCredentialArgs.setCptId(cptBaseInfo.getCptId());
-        }
+        newPasswordKey = TestBaseUtil.createEcKeyPair();
     }
 
-    /** 
+    /**
      * case: verifyCredentialWithSpecifiedPubKey success.
      */
     @Test
-    public void testVerifyCredentialWithSpecifiedPubKeyCase1() throws Exception {
+    public void testVerifyCredentialWithSpecifiedPubKeyCase1() {
 
         CreateCredentialArgs createCredentialArgs =
-            TestBaseUtil.buildCreateCredentialArgs(createWeIdWithSetAttr);
+            TestBaseUtil.buildCreateCredentialArgs(createWeIdResultWithSetAttr);
         createCredentialArgs.setCptId(cptBaseInfo.getCptId());
 
-        createCredentialArgs.getWeIdPrivateKey().setPrivateKey(pk[1]);
+        createCredentialArgs.getWeIdPrivateKey().setPrivateKey(newPasswordKey.getPrivateKey());
 
-        Credential credential = super.createCredential(createCredentialArgs);
+        CredentialWrapper credentialWrapper = super.createCredential(createCredentialArgs);
 
-        VerifyCredentialArgs verifyCredentialArgs =
-            TestBaseUtil.buildVerifyCredentialArgs(credential, pk[0]);
-
+        WeIdPublicKey weIdPublicKey = new WeIdPublicKey();
+        weIdPublicKey.setPublicKey(newPasswordKey.getPublicKey());
         ResponseData<Boolean> response =
-            credentialService.verifyCredentialWithSpecifiedPubKey(verifyCredentialArgs);
-        System.out.println("\nverifyCredentialWithSpecifiedPubKey result:");
+            credentialService.verifyCredentialWithSpecifiedPubKey(credentialWrapper, weIdPublicKey);
+        logger.info("verifyCredentialWithSpecifiedPubKey result:");
         BeanUtil.print(response);
 
         Assert.assertEquals(ErrorCode.SUCCESS.getCode(), response.getErrorCode().intValue());
         Assert.assertEquals(true, response.getResult());
     }
 
-    /** 
+    /**
      * case: verifyCredentialWithSpecifiedPubKey fail.
      */
     @Test
-    public void testVerifyCredentialWithSpecifiedPubKeyCase2() throws Exception {
+    public void testVerifyCredentialWithSpecifiedPubKeyCase2() {
 
         CreateCredentialArgs createCredentialArgs =
-            TestBaseUtil.buildCreateCredentialArgs(createWeIdWithSetAttr);
+            TestBaseUtil.buildCreateCredentialArgs(createWeIdResultWithSetAttr);
         createCredentialArgs.setCptId(cptBaseInfo.getCptId());
 
-        createCredentialArgs.getWeIdPrivateKey().setPrivateKey(pk[1]);
+        createCredentialArgs.getWeIdPrivateKey().setPrivateKey(newPasswordKey.getPrivateKey());
 
-        Credential credential = super.createCredential(createCredentialArgs);
+        CredentialWrapper credentialWrapper = super.createCredential(createCredentialArgs);
 
-        String[] pkNew = TestBaseUtil.createEcKeyPair();
-
-        VerifyCredentialArgs verifyCredentialArgs =
-            TestBaseUtil.buildVerifyCredentialArgs(credential, pkNew[0]);
+        PasswordKey passwordKey = TestBaseUtil.createEcKeyPair();
+        WeIdPublicKey weIdPublicKey = new WeIdPublicKey();
+        weIdPublicKey.setPublicKey(passwordKey.getPublicKey());
 
         ResponseData<Boolean> response =
-            credentialService.verifyCredentialWithSpecifiedPubKey(verifyCredentialArgs);
-        System.out.println("\nverifyCredentialWithSpecifiedPubKey result:");
+            credentialService.verifyCredentialWithSpecifiedPubKey(credentialWrapper, weIdPublicKey);
+        logger.info("verifyCredentialWithSpecifiedPubKey result:");
         BeanUtil.print(response);
 
         Assert.assertEquals(ErrorCode.CREDENTIAL_SIGNATURE_BROKEN.getCode(),
@@ -108,26 +105,23 @@ public class TestVerifyCredentialWithSpecifiedPubKey extends TestBaseServcie {
         Assert.assertEquals(false, response.getResult());
     }
 
-    /** 
+    /**
      * case: verifyCredentialWithSpecifiedPubKey publicKey is null.
      */
     @Test
-    public void testVerifyCredentialWithSpecifiedPubKeyCase3() throws Exception {
+    public void testVerifyCredentialWithSpecifiedPubKeyCase3() {
 
         CreateCredentialArgs createCredentialArgs =
-            TestBaseUtil.buildCreateCredentialArgs(createWeIdWithSetAttr);
+            TestBaseUtil.buildCreateCredentialArgs(createWeIdResultWithSetAttr);
         createCredentialArgs.setCptId(cptBaseInfo.getCptId());
 
-        createCredentialArgs.getWeIdPrivateKey().setPrivateKey(pk[1]);
+        createCredentialArgs.getWeIdPrivateKey().setPrivateKey(newPasswordKey.getPrivateKey());
 
-        Credential credential = super.createCredential(createCredentialArgs);
-
-        VerifyCredentialArgs verifyCredentialArgs =
-            TestBaseUtil.buildVerifyCredentialArgs(credential, null);
+        CredentialWrapper credentialWrapper = super.createCredential(createCredentialArgs);
 
         ResponseData<Boolean> response =
-            credentialService.verifyCredentialWithSpecifiedPubKey(verifyCredentialArgs);
-        System.out.println("\nverifyCredentialWithSpecifiedPubKey result:");
+            credentialService.verifyCredentialWithSpecifiedPubKey(credentialWrapper, null);
+        logger.info("verifyCredentialWithSpecifiedPubKey result:");
         BeanUtil.print(response);
 
         Assert.assertEquals(ErrorCode.CREDENTIAL_ISSUER_MISMATCH.getCode(),
@@ -135,98 +129,44 @@ public class TestVerifyCredentialWithSpecifiedPubKey extends TestBaseServcie {
         Assert.assertEquals(false, response.getResult());
     }
 
-    /** 
+    /**
      * case: verifyCredentialArgs is null.
      */
     @Test
-    public void testVerifyCredentialWithSpecifiedPubKeyCase4() throws Exception {
+    public void testVerifyCredentialWithSpecifiedPubKeyCase4() {
 
-        VerifyCredentialArgs verifyCredentialArgs = null;
-
+        WeIdPublicKey weIdPublicKey = new WeIdPublicKey();
+        weIdPublicKey.setPublicKey(newPasswordKey.getPublicKey());
         ResponseData<Boolean> response =
-            credentialService.verifyCredentialWithSpecifiedPubKey(verifyCredentialArgs);
-        System.out.println("\nverifyCredentialWithSpecifiedPubKey result:");
+            credentialService.verifyCredentialWithSpecifiedPubKey(null, weIdPublicKey);
+        logger.info("verifyCredentialWithSpecifiedPubKey result:");
         BeanUtil.print(response);
 
         Assert.assertEquals(ErrorCode.ILLEGAL_INPUT.getCode(), response.getErrorCode().intValue());
         Assert.assertEquals(false, response.getResult());
     }
 
-    /** 
-     * case: credential is null.
-     */
-    @Test
-    public void testVerifyCredentialWithSpecifiedPubKeyCase5() throws Exception {
 
-        CreateCredentialArgs createCredentialArgs =
-            TestBaseUtil.buildCreateCredentialArgs(createWeIdWithSetAttr);
-        createCredentialArgs.setCptId(cptBaseInfo.getCptId());
-
-        createCredentialArgs.getWeIdPrivateKey().setPrivateKey(pk[1]);
-
-        Credential credential = super.createCredential(createCredentialArgs);
-
-        VerifyCredentialArgs verifyCredentialArgs =
-            TestBaseUtil.buildVerifyCredentialArgs(credential, pk[0]);
-        verifyCredentialArgs.setCredential(null);
-
-        ResponseData<Boolean> response =
-            credentialService.verifyCredentialWithSpecifiedPubKey(verifyCredentialArgs);
-        System.out.println("\nverifyCredentialWithSpecifiedPubKey result:");
-        BeanUtil.print(response);
-
-        Assert.assertEquals(ErrorCode.ILLEGAL_INPUT.getCode(), response.getErrorCode().intValue());
-        Assert.assertEquals(false, response.getResult());
-    }
-
-    /** 
-     * case: weIdPublicKey is null.
-     */
-    @Test
-    public void testVerifyCredentialWithSpecifiedPubKeyCase6() throws Exception {
-
-        CreateCredentialArgs createCredentialArgs =
-            TestBaseUtil.buildCreateCredentialArgs(createWeIdWithSetAttr);
-        createCredentialArgs.setCptId(cptBaseInfo.getCptId());
-
-        createCredentialArgs.getWeIdPrivateKey().setPrivateKey(pk[1]);
-
-        Credential credential = super.createCredential(createCredentialArgs);
-
-        VerifyCredentialArgs verifyCredentialArgs =
-            TestBaseUtil.buildVerifyCredentialArgs(credential, pk[0]);
-        verifyCredentialArgs.setWeIdPublicKey(null);
-
-        ResponseData<Boolean> response =
-            credentialService.verifyCredentialWithSpecifiedPubKey(verifyCredentialArgs);
-        System.out.println("\nverifyCredentialWithSpecifiedPubKey result:");
-        BeanUtil.print(response);
-
-        Assert.assertEquals(ErrorCode.CREDENTIAL_ISSUER_MISMATCH.getCode(),
-            response.getErrorCode().intValue());
-        Assert.assertEquals(false, response.getResult());
-    }
-
-    /** 
+    /**
      * case: verifyCredentialWithSpecifiedPubKey publicKey is "xxxxxxxxxxxxx".
      */
     @Test
-    public void testVerifyCredentialWithSpecifiedPubKeyCase7() throws Exception {
+    public void testVerifyCredentialWithSpecifiedPubKeyCase7() {
 
         CreateCredentialArgs createCredentialArgs =
-            TestBaseUtil.buildCreateCredentialArgs(createWeIdWithSetAttr);
+            TestBaseUtil.buildCreateCredentialArgs(createWeIdResultWithSetAttr);
         createCredentialArgs.setCptId(cptBaseInfo.getCptId());
 
-        createCredentialArgs.getWeIdPrivateKey().setPrivateKey(pk[1]);
+        createCredentialArgs.getWeIdPrivateKey().setPrivateKey(newPasswordKey.getPrivateKey());
 
-        Credential credential = super.createCredential(createCredentialArgs);
+        CredentialWrapper credentialWrapper = super.createCredential(createCredentialArgs);
 
-        VerifyCredentialArgs verifyCredentialArgs =
-            TestBaseUtil.buildVerifyCredentialArgs(credential, "xxxxxxxxxxxxx");
+        WeIdPublicKey weIdPublicKey = new WeIdPublicKey();
+        weIdPublicKey.setPublicKey("xxxxxxxxxxxxx");
 
         ResponseData<Boolean> response =
-            credentialService.verifyCredentialWithSpecifiedPubKey(verifyCredentialArgs);
-        System.out.println("\nverifyCredentialWithSpecifiedPubKey result:");
+            credentialService.verifyCredentialWithSpecifiedPubKey(credentialWrapper, weIdPublicKey);
+        logger.info("verifyCredentialWithSpecifiedPubKey result:");
         BeanUtil.print(response);
 
         Assert.assertEquals(ErrorCode.CREDENTIAL_ERROR.getCode(),

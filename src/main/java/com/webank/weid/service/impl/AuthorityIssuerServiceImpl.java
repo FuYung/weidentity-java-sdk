@@ -37,7 +37,6 @@ import org.bcos.web3j.abi.datatypes.generated.Int256;
 import org.bcos.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.webank.weid.config.ContractConfig;
@@ -68,8 +67,7 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
     private static AuthorityIssuerController authorityIssuerController;
     private static String authorityIssuerControllerAddress;
 
-    @Autowired
-    private WeIdService weIdService;
+    private WeIdService weIdService = new WeIdServiceImpl();
 
     /**
      * Instantiates a new authority issuer service impl.
@@ -107,7 +105,6 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
      */
     @Override
     public ResponseData<Boolean> registerAuthorityIssuer(RegisterAuthorityIssuerArgs args) {
-        ResponseData<Boolean> responseData = new ResponseData<Boolean>();
 
         ResponseData<Boolean> innerResponseData = checkRegisterAuthorityIssuerArgs(args);
         if (!innerResponseData.getResult()) {
@@ -121,9 +118,11 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
         long[] longAttributes = new long[16];
         Long createDate = System.currentTimeMillis();
         longAttributes[0] = createDate;
-        DynamicBytes accValue = new DynamicBytes(authorityIssuer.getAccValue().getBytes());
         Address addr = new Address(weAddress);
         try {
+            DynamicBytes accValue = new DynamicBytes(authorityIssuer
+                .getAccValue()
+                .getBytes(WeIdConstant.UTF_8));
             reloadContract(args.getWeIdPrivateKey().getPrivateKey());
             Future<TransactionReceipt> future = authorityIssuerController.addAuthorityIssuer(
                 addr,
@@ -140,7 +139,7 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
 
             AuthorityIssuerRetLogEventResponse event = eventList.get(0);
             if (event != null) {
-                responseData = verifyAuthorityIssuerRelatedEvent(
+                return verifyAuthorityIssuerRelatedEvent(
                     event,
                     addr,
                     WeIdConstant.ADD_AUTHORITY_ISSUER_OPCODE
@@ -160,7 +159,6 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
             logger.error("register authority issuer failed.", e);
             return new ResponseData<>(false, ErrorCode.AUTHORITY_ISSUER_ERROR);
         }
-        return responseData;
     }
 
     /**
@@ -171,7 +169,6 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
      */
     @Override
     public ResponseData<Boolean> removeAuthorityIssuer(RemoveAuthorityIssuerArgs args) {
-        ResponseData<Boolean> responseData = new ResponseData<Boolean>();
 
         ResponseData<Boolean> innerResponseData = checkRemoveAuthorityIssuerArgs(args);
         if (!innerResponseData.getResult()) {
@@ -195,7 +192,7 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
 
             AuthorityIssuerRetLogEventResponse event = eventList.get(0);
             if (event != null) {
-                responseData = verifyAuthorityIssuerRelatedEvent(
+                return verifyAuthorityIssuerRelatedEvent(
                     event,
                     addr,
                     WeIdConstant.REMOVE_AUTHORITY_ISSUER_OPCODE
@@ -214,7 +211,6 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
             logger.error("remove authority issuer failed.", e);
             return new ResponseData<>(false, ErrorCode.AUTHORITY_ISSUER_ERROR);
         }
-        return responseData;
     }
 
     /**
@@ -289,7 +285,7 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
             String name = extractNameFromBytes32Attributes(bytes32Attributes.getValue());
             Long createDate = Long
                 .valueOf(int256Attributes.getValue().get(0).getValue().longValue());
-            if (StringUtils.isEmpty(name) && createDate.equals(new Long(0))) {
+            if (StringUtils.isEmpty(name) && createDate.equals(WeIdConstant.LONG_VALUE_ZERO)) {
                 return new ResponseData<AuthorityIssuer>(
                     null, ErrorCode.AUTHORITY_ISSUER_CONTRACT_ERROR_NOT_EXISTS);
             }
@@ -313,7 +309,7 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
 
     private ResponseData<Boolean> checkRegisterAuthorityIssuerArgs(
         RegisterAuthorityIssuerArgs args) {
-        ResponseData<Boolean> responseData = new ResponseData<Boolean>();
+
         if (args == null) {
             return new ResponseData<>(false, ErrorCode.ILLEGAL_INPUT);
         }
@@ -338,13 +334,13 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
         if (!innerResponseData.getResult()) {
             return new ResponseData<>(false, ErrorCode.WEID_INVALID);
         }
-
+        ResponseData<Boolean> responseData = new ResponseData<Boolean>();
         responseData.setResult(true);
         return responseData;
     }
 
     private ResponseData<Boolean> checkRemoveAuthorityIssuerArgs(RemoveAuthorityIssuerArgs args) {
-        ResponseData<Boolean> responseData = new ResponseData<Boolean>();
+
         if (args == null) {
             return new ResponseData<>(false, ErrorCode.ILLEGAL_INPUT);
         }
@@ -355,12 +351,13 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
             || StringUtils.isEmpty(args.getWeIdPrivateKey().getPrivateKey())) {
             return new ResponseData<>(false, ErrorCode.AUTHORITY_ISSUER_PRIVATE_KEY_ILLEGAL);
         }
+        ResponseData<Boolean> responseData = new ResponseData<Boolean>();
         responseData.setResult(true);
         return responseData;
     }
 
     private ResponseData<Boolean> checkAuthorityIssuerArgsValidity(AuthorityIssuer args) {
-        ResponseData<Boolean> responseData = new ResponseData<Boolean>();
+
         if (args == null) {
             return new ResponseData<>(false, ErrorCode.ILLEGAL_INPUT);
         }
@@ -378,13 +375,20 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
         } catch (Exception e) {
             return new ResponseData<>(false, ErrorCode.AUTHORITY_ISSUER_ACCVALUE_ILLEAGAL);
         }
+        ResponseData<Boolean> responseData = new ResponseData<Boolean>();
         responseData.setResult(true);
         return responseData;
     }
 
     private ResponseData<Boolean> verifyAuthorityIssuerRelatedEvent(
-        AuthorityIssuerRetLogEventResponse event, Address addr, Integer opcode) {
+        AuthorityIssuerRetLogEventResponse event,
+        Address addr,
+        Integer opcode) {
+
         ResponseData<Boolean> responseData = new ResponseData<Boolean>();
+        if (event.addr == null || event.operation == null || event.retCode == null) {
+            return new ResponseData<>(false, ErrorCode.ILLEGAL_INPUT);
+        }
         if (event.addr.getValue().equals(addr.getValue())) {
             Integer eventOpcode = event.operation.getValue().intValue();
             if (eventOpcode.equals(opcode)) {
@@ -430,22 +434,16 @@ public class AuthorityIssuerServiceImpl extends BaseService implements Authority
 
     private String[] loadNameToStringAttributes(String name) {
         String[] nameArray = new String[16];
-        // Each String item is Bytes32, so automatically compute how many indices will be used
-        int maxLength = WeIdConstant.MAX_AUTHORITY_ISSUER_NAME_LENGTH / 32;
-        int i = 0;
-        if (name.length() < maxLength * 32) {
-            maxLength = (int) Math.ceil((double) name.length() / 32.0);
-        }
-        nameArray[i] = name.substring(i * 32, name.length());
+        nameArray[0] = name;
         return nameArray;
     }
 
     private String extractNameFromBytes32Attributes(List<Bytes32> bytes32Array) {
-        String name = StringUtils.EMPTY;
+        StringBuffer name = new StringBuffer();
         int maxLength = WeIdConstant.MAX_AUTHORITY_ISSUER_NAME_LENGTH / 32;
         for (int i = 0; i < maxLength; i++) {
-            name += DataTypetUtils.bytes32ToString(bytes32Array.get(i));
+            name.append(DataTypetUtils.bytes32ToString(bytes32Array.get(i)));
         }
-        return name;
+        return name.toString();
     }
 }

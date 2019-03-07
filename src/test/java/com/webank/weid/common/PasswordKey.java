@@ -17,32 +17,38 @@
  *       along with weidentity-java-sdk.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.webank.weid.protocol.request;
-
-import com.webank.weid.protocol.base.WeIdPrivateKey;
-
-import lombok.Data;
+package com.webank.weid.common;
 
 /**
- * The Arguments for the SDK API register CPT.
+ * public and private key object class.
+ * @author v_wbgyang
  *
- * @author lingfenghe
  */
-@Data
-public class RegisterCptArgs {
+public class PasswordKey {
 
     /**
-     * Required: The json schema content defined for this CPT.
+     * the key of privateKey.
      */
-    private String cptJsonSchema;
-
+    private String privateKey;
+    
     /**
-     * Required: The weIdentity DID of the publisher who register this CPT.
+     * the key of publicKey.
      */
-    private String cptPublisher;
+    private String publicKey;
 
-    /**
-     * Required: The private key for the publisher who register this CPT.
-     */
-    private WeIdPrivateKey cptPublisherPrivateKey;
+    public String getPrivateKey() {
+        return privateKey;
+    }
+
+    public void setPrivateKey(String privateKey) {
+        this.privateKey = privateKey;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public void setPublicKey(String publicKey) {
+        this.publicKey = publicKey;
+    } 
 }

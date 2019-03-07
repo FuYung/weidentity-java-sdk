@@ -17,37 +17,32 @@
  *       along with weidentity-java-sdk.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.webank.weid.protocol.request;
+package com.webank.weid.exception;
 
-import com.webank.weid.protocol.base.WeIdPrivateKey;
-
-import lombok.Data;
+import com.webank.weid.constant.ErrorCode;
 
 /**
- * The Arguments for the SDK API update CPT.
- *
- * @author lingfenghe
+ * WeIdBase Exception.
+ * Base Exception for WeIdentity Project.
+ * @author tonychen
  */
-@Data
-public class UpdateCptArgs {
+@SuppressWarnings("serial")
+public class DataTypeCastException extends WeIdBaseException {
+
 
     /**
-     * Required: the id for the CPT.
+     * constructor.
+     *
+     * @param cause Throwable
      */
-    private Integer cptId;
+    public DataTypeCastException(Throwable cause) {
+        super(ErrorCode.DATA_TYPE_CASE_ERROR.getCodeDesc(), cause);
+    }
 
     /**
-     * Required: the json schema content defined for this CPT.
+     * get associated error code.
      */
-    private String cptJsonSchema;
-
-    /**
-     * Required: the WeIdentity DID of the publisher who register this CPT.
-     */
-    private String cptPublisher;
-
-    /**
-     * Required: the private key for the publisher who register this CPT.
-     */
-    private WeIdPrivateKey cptPublisherPrivateKey;
+    public ErrorCode getErrorCode() {
+        return ErrorCode.DATA_TYPE_CASE_ERROR;
+    }
 }

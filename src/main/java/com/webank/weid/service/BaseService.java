@@ -50,9 +50,9 @@ public abstract class BaseService {
 
     private static final Logger logger = LoggerFactory.getLogger(BaseService.class);
 
-    protected static ApplicationContext context;
+    protected static final ApplicationContext context;
 
-    protected static Credentials credentials;
+    private static Credentials credentials;
 
     private static Web3j web3j;
 
@@ -139,6 +139,7 @@ public abstract class BaseService {
      * Reload contract.
      *
      * @param contractAddress the contract address
+     * @param privateKey the privateKey of the sender
      * @param cls the class
      * @return the contract
      */
@@ -183,14 +184,18 @@ public abstract class BaseService {
         Object contract = null;
         try {
             // load contract
-        	if(null == credentials) {
-        		initCredentials();
-        	}
+            if (null == credentials) {
+                initCredentials();
+            }
             contract = loadContract(contractAddress, credentials, cls);
             logger.info(cls.getSimpleName() + " init succ");
 
-        } catch (Exception e) {
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             logger.error("load contract :{} failed. Error message is :{}",
+                cls.getSimpleName(), e);
+            throw new LoadContractException();
+        } catch (Exception e) {
+            logger.error("load contract Exception:{} failed. Error message is :{}",
                 cls.getSimpleName(), e);
             throw new LoadContractException();
         }

@@ -19,23 +19,32 @@
 
 package com.webank.weid.full.cpt;
 
+import java.util.List;
+import java.util.concurrent.Future;
+
+import mockit.Mock;
+import mockit.MockUp;
+import org.bcos.web3j.abi.datatypes.DynamicArray;
+import org.bcos.web3j.abi.datatypes.Type;
+import org.bcos.web3j.abi.datatypes.generated.Bytes32;
+import org.bcos.web3j.abi.datatypes.generated.Uint256;
+import org.junit.Assert;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.webank.weid.common.BeanUtil;
 import com.webank.weid.constant.ErrorCode;
 import com.webank.weid.contract.CptController;
+import com.webank.weid.exception.DataTypeCastException;
+import com.webank.weid.exception.WeIdBaseException;
 import com.webank.weid.full.TestBaseServcie;
 import com.webank.weid.full.TestBaseUtil;
 import com.webank.weid.protocol.base.Cpt;
 import com.webank.weid.protocol.base.CptBaseInfo;
-import com.webank.weid.protocol.request.UpdateCptArgs;
+import com.webank.weid.protocol.request.CptMapArgs;
 import com.webank.weid.protocol.response.ResponseData;
-import java.util.List;
-import java.util.concurrent.Future;
-import mockit.Mock;
-import mockit.MockUp;
-import org.bcos.web3j.abi.datatypes.Type;
-import org.bcos.web3j.abi.datatypes.generated.Uint256;
-import org.junit.Assert;
-import org.junit.Test;
+import com.webank.weid.util.DataTypetUtils;
 
 /**
  * queryCpt method for testing CptService.
@@ -44,13 +53,15 @@ import org.junit.Test;
  *
  */
 public class TestQueryCpt extends TestBaseServcie {
+    
+    private static final Logger logger = LoggerFactory.getLogger(TestQueryCpt.class);
 
     @Override
-    public void testInit() throws Exception {
+    public void testInit() {
 
         super.testInit();
-        if (cptBaseInfo == null) {
-            cptBaseInfo = super.registerCpt(createWeIdWithSetAttr);
+        if (null == cptBaseInfo) {
+            cptBaseInfo = super.registerCpt(createWeIdResultWithSetAttr);
         }
     }
 
@@ -61,7 +72,7 @@ public class TestQueryCpt extends TestBaseServcie {
     public void testQueryCptCase1() {
 
         ResponseData<Cpt> response = cptService.queryCpt(cptBaseInfo.getCptId());
-        System.out.println("\nqueryCpt result:");
+        logger.info("queryCpt result:");
         BeanUtil.print(response);
 
         Assert.assertEquals(ErrorCode.SUCCESS.getCode(), response.getErrorCode().intValue());
@@ -75,7 +86,7 @@ public class TestQueryCpt extends TestBaseServcie {
     public void testQueryCptCase2() {
 
         ResponseData<Cpt> response = cptService.queryCpt(null);
-        System.out.println("\nqueryCpt result:");
+        logger.info("queryCpt result:");
         BeanUtil.print(response);
 
         Assert.assertEquals(ErrorCode.ILLEGAL_INPUT.getCode(), response.getErrorCode().intValue());
@@ -89,7 +100,7 @@ public class TestQueryCpt extends TestBaseServcie {
     public void testQueryCptCase3() {
 
         ResponseData<Cpt> response = cptService.queryCpt(-1);
-        System.out.println("\nqueryCpt result:");
+        logger.info("queryCpt result:");
         BeanUtil.print(response);
 
         Assert.assertEquals(ErrorCode.ILLEGAL_INPUT.getCode(), response.getErrorCode().intValue());
@@ -103,7 +114,7 @@ public class TestQueryCpt extends TestBaseServcie {
     public void testQueryCptCase4() {
 
         ResponseData<Cpt> response = cptService.queryCpt(100000);
-        System.out.println("\nqueryCpt result:");
+        logger.info("queryCpt result:");
         BeanUtil.print(response);
 
         Assert.assertEquals(ErrorCode.CPT_NOT_EXISTS.getCode(), response.getErrorCode().intValue());
@@ -117,23 +128,25 @@ public class TestQueryCpt extends TestBaseServcie {
     public void testQueryCptCase5() {
 
         ResponseData<Cpt> response = cptService.queryCpt(cptBaseInfo.getCptId());
-        System.out.println("\nqueryCpt result:");
+        logger.info("queryCpt result:");
         BeanUtil.print(response);
 
         Assert.assertEquals(ErrorCode.SUCCESS.getCode(), response.getErrorCode().intValue());
         Assert.assertNotNull(response.getResult());
 
-        UpdateCptArgs updateCptArgs = TestBaseUtil.buildUpdateCptArgs(createWeIdNew, cptBaseInfo);
+        CptMapArgs cptMapArgs = TestBaseUtil.buildCptArgs(createWeIdNew);
 
-        ResponseData<CptBaseInfo> responseUp = cptService.updateCpt(updateCptArgs);
-        System.out.println("\nupdateCpt result:");
+        ResponseData<CptBaseInfo> responseUp = cptService.updateCpt(
+            cptMapArgs,
+            cptBaseInfo.getCptId());
+        logger.info("updateCpt result:");
         BeanUtil.print(responseUp);
 
         Assert.assertEquals(ErrorCode.SUCCESS.getCode(), responseUp.getErrorCode().intValue());
         Assert.assertNotNull(responseUp.getResult());
 
         ResponseData<Cpt> responseQ = cptService.queryCpt(cptBaseInfo.getCptId());
-        System.out.println("\nqueryCpt result:");
+        logger.info("queryCpt result:");
         BeanUtil.print(responseQ);
 
         Assert.assertEquals(ErrorCode.SUCCESS.getCode(), responseQ.getErrorCode().intValue());
@@ -146,22 +159,17 @@ public class TestQueryCpt extends TestBaseServcie {
     @Test
     public void testQueryCptCase6() {
 
-        final MockUp<Future<List<Type<?>>>> mockFuture = new MockUp<Future<List<Type<?>>>>() {
-            @Mock
-            public Future<List<Type<?>>> get() throws Exception {
-                throw new InterruptedException();
-            }
-        };
+        MockUp<Future<?>> mockFuture = mockInterruptedFuture();
 
         MockUp<CptController> mockTest = new MockUp<CptController>() {
             @Mock
-            public Future<List<Type<?>>> queryCpt(Uint256 cptId) throws Exception {
+            public Future<?> queryCpt(Uint256 cptId) {
                 return mockFuture.getMockInstance();
             }
         };
 
         ResponseData<Cpt> response = cptService.queryCpt(cptBaseInfo.getCptId());
-        System.out.println("\nqueryCpt result:");
+        logger.info("queryCpt result:");
         BeanUtil.print(response);
 
         mockTest.tearDown();
@@ -180,13 +188,13 @@ public class TestQueryCpt extends TestBaseServcie {
 
         MockUp<CptController> mockTest = new MockUp<CptController>() {
             @Mock
-            public Future<List<Type<?>>> queryCpt(Uint256 cptId) throws Exception {
+            public Future<List<Type<?>>> queryCpt(Uint256 cptId) {
                 return null;
             }
         };
 
         ResponseData<Cpt> response = cptService.queryCpt(cptBaseInfo.getCptId());
-        System.out.println("\nqueryCpt result:");
+        logger.info("queryCpt result:");
         BeanUtil.print(response);
 
         mockTest.tearDown();
@@ -194,4 +202,35 @@ public class TestQueryCpt extends TestBaseServcie {
         Assert.assertEquals(ErrorCode.UNKNOW_ERROR.getCode(), response.getErrorCode().intValue());
         Assert.assertNull(response.getResult());
     }
+
+    /**
+     * case: mock DataTypetUtils.bytes32DynamicArrayToStringArrayWithoutTrim()
+     *      for DataTypeCastException.DataTypeCastException()
+     */
+    @Test
+    public void testQueryCptCase8() {
+
+        MockUp<DataTypetUtils> mockTest = new MockUp<DataTypetUtils>() {
+            @Mock
+            public String[] bytes32DynamicArrayToStringArrayWithoutTrim(
+                DynamicArray<Bytes32> bytes32DynamicArray)
+                throws DataTypeCastException {
+                WeIdBaseException e = new WeIdBaseException(
+                    "mock DataTypeCastException for coverage.");
+                logger.error("testQueryCptCase8:{}", e.toString(), e);
+                throw new DataTypeCastException(e);
+            }
+        };
+
+        ResponseData<Cpt> response = cptService.queryCpt(cptBaseInfo.getCptId());
+        logger.info("queryCpt result:");
+        BeanUtil.print(response);
+
+        mockTest.tearDown();
+
+        Assert.assertEquals(ErrorCode.UNKNOW_ERROR.getCode(), response.getErrorCode().intValue());
+        Assert.assertNull(response.getResult());
+    }
+
+
 }
